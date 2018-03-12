@@ -1,0 +1,229 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: network01-orderer1
+spec:
+  type: NodePort
+  selector:
+    app: network01-orderer1
+  ports:
+    - protocol: TCP
+      port: 7050
+      nodePort: 31050
+      name: orderer-port
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: network01-orderer3
+spec:
+  type: NodePort
+  selector:
+    app: network01-orderer3
+  ports:
+    - protocol: TCP
+      port: 7050
+      nodePort: 31070
+      name: orderer-port
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: network01-orderer2
+spec:
+  type: NodePort
+  selector:
+    app: network01-orderer2
+  ports:
+    - protocol: TCP
+      port: 7050
+      nodePort: 31060
+      name: orderer-port
+
+---
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: network01-orderer3-deployment
+  labels:
+    app: network01-orderer3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: network01-orderer3
+  template:
+    metadata:
+      labels:
+        app: network01-orderer3
+    spec:
+      containers:
+        - name: network01-orderer3
+          image: registry.cn-hangzhou.aliyuncs.com/cos-solution/fabric-orderer:x86_64-1.0.0
+          imagePullPolicy: "IfNotPresent"
+          ports:
+            - containerPort: 7050
+              name: orderer-port
+          command: ["orderer"]
+          env:
+            - name: GODEBUG
+              value: "netdns=go"
+            - name: ORDERER_GENERAL_LOGLEVEL
+              value: "debug"
+            - name: ORDERER_GENERAL_LISTENADDRESS
+              value: "0.0.0.0"
+            - name: ORDERER_GENERAL_GENESISMETHOD
+              value: "file"
+            - name: ORDERER_GENERAL_GENESISFILE
+              value: "/var/hyperledger/production/genesis.block"
+            - name: ORDERER_GENERAL_LOCALMSPID
+              value: "OrdererMSP"
+            - name: ORDERER_GENERAL_LOCALMSPDIR
+              value: "/var/hyperledger/production/msp"
+            - name: ORDERER_GENERAL_TLS_ENABLED
+              value: "true"
+            - name: ORDERER_GENERAL_TLS_PRIVATEKEY
+              value: "/var/hyperledger/production/tls/server.key"
+            - name: ORDERER_GENERAL_TLS_CERTIFICATE
+              value: "/var/hyperledger/production/tls/server.crt"
+            - name: ORDERER_GENERAL_TLS_ROOTCAS
+              value: "[/var/hyperledger/production/tls/ca.crt]"
+          volumeMounts:
+            - name: data
+              mountPath: /var/hyperledger/production
+      initContainers:
+        - name: check-kafka
+          image: registry.cn-hangzhou.aliyuncs.com/cos-solution/fabric-tools:x86_64-1.0.0
+          imagePullPolicy: "IfNotPresent"
+          command: ['sh', '-c']
+          args: ['until echo dump | nc -w 3 network01-zookeeper1 2181 | grep brokers; do echo waiting for kafka brokers; sleep 3; done;']
+      volumes:
+        - name: data
+          hostPath:
+            path: "/data/fabric/network01/network01-orderer3"
+
+---
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: network01-orderer1-deployment
+  labels:
+    app: network01-orderer1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: network01-orderer1
+  template:
+    metadata:
+      labels:
+        app: network01-orderer1
+    spec:
+      containers:
+        - name: network01-orderer1
+          image: registry.cn-hangzhou.aliyuncs.com/cos-solution/fabric-orderer:x86_64-1.0.0
+          imagePullPolicy: "IfNotPresent"
+          ports:
+            - containerPort: 7050
+              name: orderer-port
+          command: ["orderer"]
+          env:
+            - name: GODEBUG
+              value: "netdns=go"
+            - name: ORDERER_GENERAL_LOGLEVEL
+              value: "debug"
+            - name: ORDERER_GENERAL_LISTENADDRESS
+              value: "0.0.0.0"
+            - name: ORDERER_GENERAL_GENESISMETHOD
+              value: "file"
+            - name: ORDERER_GENERAL_GENESISFILE
+              value: "/var/hyperledger/production/genesis.block"
+            - name: ORDERER_GENERAL_LOCALMSPID
+              value: "OrdererMSP"
+            - name: ORDERER_GENERAL_LOCALMSPDIR
+              value: "/var/hyperledger/production/msp"
+            - name: ORDERER_GENERAL_TLS_ENABLED
+              value: "true"
+            - name: ORDERER_GENERAL_TLS_PRIVATEKEY
+              value: "/var/hyperledger/production/tls/server.key"
+            - name: ORDERER_GENERAL_TLS_CERTIFICATE
+              value: "/var/hyperledger/production/tls/server.crt"
+            - name: ORDERER_GENERAL_TLS_ROOTCAS
+              value: "[/var/hyperledger/production/tls/ca.crt]"
+          volumeMounts:
+            - name: data
+              mountPath: /var/hyperledger/production
+      initContainers:
+        - name: check-kafka
+          image: registry.cn-hangzhou.aliyuncs.com/cos-solution/fabric-tools:x86_64-1.0.0
+          imagePullPolicy: "IfNotPresent"
+          command: ['sh', '-c']
+          args: ['until echo dump | nc -w 3 network01-zookeeper1 2181 | grep brokers; do echo waiting for kafka brokers; sleep 3; done;']
+      volumes:
+        - name: data
+          hostPath:
+            path: "/data/fabric/network01/network01-orderer1"
+
+---
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: network01-orderer2-deployment
+  labels:
+    app: network01-orderer2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: network01-orderer2
+  template:
+    metadata:
+      labels:
+        app: network01-orderer2
+    spec:
+      containers:
+        - name: network01-orderer2
+          image: registry.cn-hangzhou.aliyuncs.com/cos-solution/fabric-orderer:x86_64-1.0.0
+          imagePullPolicy: "IfNotPresent"
+          ports:
+            - containerPort: 7050
+              name: orderer-port
+          command: ["orderer"]
+          env:
+            - name: GODEBUG
+              value: "netdns=go"
+            - name: ORDERER_GENERAL_LOGLEVEL
+              value: "debug"
+            - name: ORDERER_GENERAL_LISTENADDRESS
+              value: "0.0.0.0"
+            - name: ORDERER_GENERAL_GENESISMETHOD
+              value: "file"
+            - name: ORDERER_GENERAL_GENESISFILE
+              value: "/var/hyperledger/production/genesis.block"
+            - name: ORDERER_GENERAL_LOCALMSPID
+              value: "OrdererMSP"
+            - name: ORDERER_GENERAL_LOCALMSPDIR
+              value: "/var/hyperledger/production/msp"
+            - name: ORDERER_GENERAL_TLS_ENABLED
+              value: "true"
+            - name: ORDERER_GENERAL_TLS_PRIVATEKEY
+              value: "/var/hyperledger/production/tls/server.key"
+            - name: ORDERER_GENERAL_TLS_CERTIFICATE
+              value: "/var/hyperledger/production/tls/server.crt"
+            - name: ORDERER_GENERAL_TLS_ROOTCAS
+              value: "[/var/hyperledger/production/tls/ca.crt]"
+          volumeMounts:
+            - name: data
+              mountPath: /var/hyperledger/production
+      initContainers:
+        - name: check-kafka
+          image: registry.cn-hangzhou.aliyuncs.com/cos-solution/fabric-tools:x86_64-1.0.0
+          imagePullPolicy: "IfNotPresent"
+          command: ['sh', '-c']
+          args: ['until echo dump | nc -w 3 network01-zookeeper1 2181 | grep brokers; do echo waiting for kafka brokers; sleep 3; done;']
+      volumes:
+        - name: data
+          hostPath:
+            path: "/data/fabric/network01/network01-orderer2"

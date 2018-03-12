@@ -1,0 +1,65 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: fabric-network-generator-svc
+spec:
+  selector:
+    app: fabric-network-generator
+  ports:
+    - protocol: TCP
+      port: 8080
+
+---
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: fabric-network-generator-deployment
+  labels:
+    app: fabric-network-generator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fabric-network-generator
+  template:
+    metadata:
+      labels:
+        app: fabric-network-generator
+    spec:
+      containers:
+        - name: generator
+          image: registry.cn-hangzhou.aliyuncs.com/cos-solution/fabric-network-generator:1.1
+          imagePullPolicy: "IfNotPresent"
+          ports:
+          - containerPort: 8080
+          env:
+            - name: FABRIC_CONFIG_JSON
+              value: |-
+                {
+                  "dockerImageRegistry": "registry.cn-hangzhou.aliyuncs.com/cos-solution",
+                  "externalAddress": "1.2.3.4",
+                  "fabricNetwork": "network01",
+                  "fabricChannel": "bankchannel",
+                  "ordererDomain": "alibaba.com",
+                  "peerDomain": "alibaba.com",
+                  "ordererNum": 3,
+                  "orgNum": 2,
+                  "caExternalPortList": ["31054","31064"],
+                  "ordererExternalPortList": ["31050","31060","31070"],
+                  "peerExternalGrpcPortList": ["31051","31061","31071","31081"],
+                  "peerExternalEventPortList": ["31053","31063","31073","31083"]
+                }
+          volumeMounts:
+            - name: fabric-root
+              mountPath: /output/fabric
+          readinessProbe:
+            exec:
+              command:
+              - ls
+              - /output/fabric/network01/GENERATION-COMPLETED
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: fabric-root
+          hostPath:
+            path: "/data/fabric"

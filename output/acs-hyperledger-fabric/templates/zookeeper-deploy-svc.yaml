@@ -1,0 +1,247 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: network01-zookeeper3
+spec:
+  selector:
+    app: network01-zookeeper3
+  ports:
+    - protocol: TCP
+      port: 2181
+      name: client-port
+    - protocol: TCP
+      port: 2888
+      name: follower-port
+    - protocol: TCP
+      port: 3888
+      name: election-port
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: network01-zookeeper1
+spec:
+  selector:
+    app: network01-zookeeper1
+  ports:
+    - protocol: TCP
+      port: 2181
+      name: client-port
+    - protocol: TCP
+      port: 2888
+      name: follower-port
+    - protocol: TCP
+      port: 3888
+      name: election-port
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: network01-zookeeper2
+spec:
+  selector:
+    app: network01-zookeeper2
+  ports:
+    - protocol: TCP
+      port: 2181
+      name: client-port
+    - protocol: TCP
+      port: 2888
+      name: follower-port
+    - protocol: TCP
+      port: 3888
+      name: election-port
+
+---
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: network01-zookeeper1-deployment
+  labels:
+    app: network01-zookeeper1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: network01-zookeeper1
+  template:
+    metadata:
+      labels:
+        app: network01-zookeeper1
+    spec:
+      containers:
+        - name: network01-zookeeper1
+          image: registry.cn-hangzhou.aliyuncs.com/cos-solution/fabric-zookeeper:x86_64-1.0.0
+          imagePullPolicy: "IfNotPresent"
+          ports:
+          - containerPort: 2181
+            name: client-port
+          - containerPort: 2888
+            name: follower-port
+          - containerPort: 3888
+            name: election-port  
+          env:
+            - name: ZOO_MY_ID
+              value: "1"
+            - name: ZOO_SERVERS
+              value: "server.1=0.0.0.0:2888:3888 server.2=network01-zookeeper2:2888:3888 server.3=network01-zookeeper3:2888:3888"
+            - name: ZOO_DATA_DIR
+              value: "/data"
+            - name: ZOO_DATA_LOG_DIR
+              value: "/data-log"
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: data-log
+              mountPath: /data-log
+      initContainers:
+        - name: check-fabric-init
+          image: registry.cn-hangzhou.aliyuncs.com/cos-solution/fabric-tools:x86_64-1.0.0
+          imagePullPolicy: "IfNotPresent"
+          command: ['sh', '-c', 'sleep 5; until ls /var/hyperledger/production/INIT-COMPLETED; do echo waiting for fabric-init; sleep 5; done; sleep 5;']
+          volumeMounts:
+            - name: fabric-network-root
+              mountPath: /var/hyperledger/production
+              readOnly: true
+      volumes:
+        - name: fabric-network-root
+          hostPath:
+            path: /data/fabric/network01
+            # Below type field is necessary to avoid auto creation of dir if not present during init container check
+            type: Directory
+        - name: data
+          hostPath:
+            path: /data/fabric/network01/network01-zookeeper1/data
+        - name: data-log
+          hostPath:
+            path: /data/fabric/network01/network01-zookeeper1/data-log
+
+---
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: network01-zookeeper2-deployment
+  labels:
+    app: network01-zookeeper2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: network01-zookeeper2
+  template:
+    metadata:
+      labels:
+        app: network01-zookeeper2
+    spec:
+      containers:
+        - name: network01-zookeeper2
+          image: registry.cn-hangzhou.aliyuncs.com/cos-solution/fabric-zookeeper:x86_64-1.0.0
+          imagePullPolicy: "IfNotPresent"
+          ports:
+          - containerPort: 2181
+            name: client-port
+          - containerPort: 2888
+            name: follower-port
+          - containerPort: 3888
+            name: election-port  
+          env:
+            - name: ZOO_MY_ID
+              value: "2"
+            - name: ZOO_SERVERS
+              value: "server.1=network01-zookeeper1:2888:3888 server.2=0.0.0.0:2888:3888 server.3=network01-zookeeper3:2888:3888"
+            - name: ZOO_DATA_DIR
+              value: "/data"
+            - name: ZOO_DATA_LOG_DIR
+              value: "/data-log"
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: data-log
+              mountPath: /data-log
+      initContainers:
+        - name: check-fabric-init
+          image: registry.cn-hangzhou.aliyuncs.com/cos-solution/fabric-tools:x86_64-1.0.0
+          imagePullPolicy: "IfNotPresent"
+          command: ['sh', '-c', 'sleep 5; until ls /var/hyperledger/production/INIT-COMPLETED; do echo waiting for fabric-init; sleep 5; done; sleep 5;']
+          volumeMounts:
+            - name: fabric-network-root
+              mountPath: /var/hyperledger/production
+              readOnly: true
+      volumes:
+        - name: fabric-network-root
+          hostPath:
+            path: /data/fabric/network01
+            # Below type field is necessary to avoid auto creation of dir if not present during init container check
+            type: Directory
+        - name: data
+          hostPath:
+            path: /data/fabric/network01/network01-zookeeper2/data
+        - name: data-log
+          hostPath:
+            path: /data/fabric/network01/network01-zookeeper2/data-log
+
+---
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: network01-zookeeper3-deployment
+  labels:
+    app: network01-zookeeper3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: network01-zookeeper3
+  template:
+    metadata:
+      labels:
+        app: network01-zookeeper3
+    spec:
+      containers:
+        - name: network01-zookeeper3
+          image: registry.cn-hangzhou.aliyuncs.com/cos-solution/fabric-zookeeper:x86_64-1.0.0
+          imagePullPolicy: "IfNotPresent"
+          ports:
+          - containerPort: 2181
+            name: client-port
+          - containerPort: 2888
+            name: follower-port
+          - containerPort: 3888
+            name: election-port  
+          env:
+            - name: ZOO_MY_ID
+              value: "3"
+            - name: ZOO_SERVERS
+              value: "server.1=network01-zookeeper1:2888:3888 server.2=network01-zookeeper2:2888:3888 server.3=0.0.0.0:2888:3888"
+            - name: ZOO_DATA_DIR
+              value: "/data"
+            - name: ZOO_DATA_LOG_DIR
+              value: "/data-log"
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: data-log
+              mountPath: /data-log
+      initContainers:
+        - name: check-fabric-init
+          image: registry.cn-hangzhou.aliyuncs.com/cos-solution/fabric-tools:x86_64-1.0.0
+          imagePullPolicy: "IfNotPresent"
+          command: ['sh', '-c', 'sleep 5; until ls /var/hyperledger/production/INIT-COMPLETED; do echo waiting for fabric-init; sleep 5; done; sleep 5;']
+          volumeMounts:
+            - name: fabric-network-root
+              mountPath: /var/hyperledger/production
+              readOnly: true
+      volumes:
+        - name: fabric-network-root
+          hostPath:
+            path: /data/fabric/network01
+            # Below type field is necessary to avoid auto creation of dir if not present during init container check
+            type: Directory
+        - name: data
+          hostPath:
+            path: /data/fabric/network01/network01-zookeeper3/data
+        - name: data-log
+          hostPath:
+            path: /data/fabric/network01/network01-zookeeper3/data-log
